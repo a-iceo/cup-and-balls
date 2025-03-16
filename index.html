@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Cups Game</title>
+    <!-- Dependencias -->
+    <script src="https://unpkg.com/three@0.153.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.91.1/dist/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-base@0.9.23/dist/index.umd.min.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-wallets@0.19.32/dist/index.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #00FFA3;
+            --secondary-color: #03E1FF;
+            --background-dark: #1a1a1a;
+            --text-color: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to bottom, var(--background-dark), #000000);
+            color: var(--text-color);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px rgba(0, 255, 163, 0.5);
+            margin-bottom: 2rem;
+        }
+
+        .game-stats {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-info {
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+
+        .wallet-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .wallet-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 163, 0.4);
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 400px;
+            border-radius: 12px;
+            background-color: rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input {
+            padding: 12px;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }
+
+        .cups {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .cup-button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cup-button.selected {
+            background: var(--primary-color);
+            color: #000;
+        }
+
+        .bet-button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bet-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            min-height: 30px;
+        }
+
+        .win { color: var(--primary-color); }
+        .lose { color: #FF4444; }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--primary-color);
+            border-top: 5px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Solana Cups Game</h1>
+        
+        <div class="wallet-info" id="walletInfo">
+            No conectado
+        </div>
+
+        <div class="wallet-buttons">
+            <button class="wallet-button" id="phantomButton">Phantom</button>
+            <button class="wallet-button" id="solflareButton">Solflare</button>
+        </div>
+
+        <div class="game-stats" id="gameStats">
+            Victorias: 0 | Derrotas: 0 | Total apostado: 0 SOL
+        </div>
+
+        <div class="game-container">
+            <canvas id="gameCanvas"></canvas>
+            <div class="controls">
+                <input type="number" id="betAmount" placeholder="Cantidad a apostar (SOL)" min="0.001" step="0.001" max="1">
+                <div class="cups">
+                    <button class="cup-button" data-cup="0">Cubilete 1</button>
+                    <button class="cup-button" data-cup="1">Cubilete 2</button>
+                    <button class="cup-button" data-cup="2">Cubilete 3</button>
+                </div>
+                <button class="bet-button" id="betButton" disabled>Apostar</button>
+                <div class="result" id="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        // Configuración principal
+        const HOUSE_ADDRESS = '3DQcphYCYYDCzs8i62zDghg6qKAvRcuhH2BsY7QEquQ2';
+        const HOUSE_FEE = 0.05;
+        const connection = new solanaWeb3.Connection(
+            'https://api.mainnet-beta.solana.com',
+            'confirmed'
+        );
+
+        // Variables de estado
+        let wallet = null;
+        let selectedCup = null;
+        let gameState = 'waiting';
+        let gameStats = {
+            wins: 0,
+            losses: 0,
+            totalBet: 0
+        };
+
+        // Cargar estadísticas guardadas
+        try {
+            const savedStats = localStorage.getItem('gameStats');
+            if (savedStats) {
+                gameStats = JSON.parse(savedStats);
+                updateStatsDisplay();
+            }
+        } catch (e) {
+            console.error('Error loading stats:', e);
+        }
+
+        // Configuración Three.js
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, 600/400, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({
+            canvas: document.getElementById('gameCanvas'),
+            antialias: true
+        });
+        renderer.setSize(600, 400);
+        renderer.setClearColor(0x000000, 0);
+
+        // Crear cubiletes
+        const cupGeometry = new THREE.CylinderGeometry(1, 1, 2, 32);
+        const cupMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x00FFA3,
+            shininess: 100
+        });
+        const cups = [
+            new THREE.Mesh(cupGeometry, cupMaterial.clone()),
+            new THREE.Mesh(cupGeometry, cupMaterial.clone()),
+            new THREE.Mesh(cupGeometry, cupMaterial.clone())
+        ];
+
+        // Posicionar cubiletes
+        cups[0].position.set(-3, 0, 0);
+        cups[1].position.set(0, 0, 0);
+        cups[2].position.set(3, 0, 0);
+        cups.forEach(cup => scene.add(cup));
+
+        // Iluminación
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(0, 5, 5);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
+
+        camera.position.z = 10;
+
+        // Animación principal
+        function animate() {
+            requestAnimationFrame(animate);
+            cups.forEach(cup => cup.rotation.y += 0.01);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Funciones de utilidad
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('gameStats').textContent = 
+                `Victorias: ${gameStats.wins} | Derrotas: ${gameStats.losses} | Total apostado: ${gameStats.totalBet.toFixed(3)} SOL`;
+        }
+
+        function updateWalletInfo() {
+            const walletInfo = document.getElementById('walletInfo');
+            if (wallet && wallet.publicKey) {
+                const address = wallet.publicKey.toString();
+                walletInfo.textContent = `Conectado: ${address.slice(0, 4)}...${address.slice(-4)}`;
+            } else {
+                walletInfo.textContent = 'No conectado';
+            }
+        }
+
+        // Eventos de los botones de cubiletes
+        document.querySelectorAll('.cup-button').forEach(button => {
+            button.addEventListener('click', () => {
+                if (gameState === 'waiting') {
+                    selectedCup = parseInt(button.dataset.cup);
+                    document.querySelectorAll('.cup-button').forEach(b => 
+                        b.classList.remove('selected'));
+                    button.classList.add('selected');
+                    document.getElementById('betButton').disabled = false;
+                }
+            });
+        });
+
+        // Conectar wallet
+        document.getElementById('phantomButton').addEventListener('click', async () => {
+            if (window.solana && window.solana.isPhantom) {
+                try {
+                    await window.solana.connect();
+                    wallet = window.solana;
+                    updateWalletInfo();
+                } catch (err) {
+                    console.error('Error connecting to Phantom:', err);
+                    alert('Error al conectar con Phantom');
+                }
+            } else {
+                window.open('https://phantom.app/', '_blank');
+            }
+        });
+
+        document.getElementById('solflareButton').addEventListener('click', async () => {
+            if (window.solflare) {
+                try {
+                    await window.solflare.connect();
+                    wallet = window.solflare;
+                    updateWalletInfo();
+                } catch (err) {
+                    console.error('Error connecting to Solflare:', err);
+                    alert('Error al conectar con Solflare');
+                }
+            } else {
+                window.open('https://solflare.com/', '_blank');
+            }
+        });
+
+        // Lógica de apuesta
+        async function processBet(betAmount) {
+            const transaction = new solanaWeb3.Transaction();
+            const instruction = solanaWeb3.SystemProgram.transfer({
+                fromPubkey: wallet.publicKey,
+                toPubkey: new solanaWeb3.PublicKey(HOUSE_ADDRESS),
+                lamports: betAmount * solanaWeb3.LAMPORTS_PER_SOL
+            });
+            
+            transaction.add(instruction);
+            
+            try {
+                const signature = await wallet.signAndSendTransaction(transaction);
+                await connection.confirmTransaction(signature.signature);
+                return true;
+            } catch (error) {
+                console.error('Transaction error:', error);
+                return false;
+            }
+        }
+
+        // Animación de mezcla
+        function animateShuffle() {
+            return new Promise(resolve => {
+                const duration = 2;
+                const timeline = gsap.timeline({
+                    onComplete: resolve
+                });
+
+                timeline.to(cups.map(cup => cup.position), {
+                    x: "random(-3, 3)",
+                    duration: duration/3,
+                    ease: "power1.inOut",
+                    repeat: 2
+                });
+            });
+        }
+
+        // Botón de apuesta
+        document.getElementById('betButton').addEventListener('click', async () => {
+            if (!wallet || selectedCup === null) return;
+
+            const betAmount = parseFloat(document.getElementById('betAmount').value);
+            const resultDiv = document.getElementById('result');
+
+            if (betAmount < 0.001 || betAmount > 1) {
+                alert('La apuesta debe estar entre 0.001 y 1 SOL');
+                return;
+            }
+
+            try {
+                showLoading();
+                gameState = 'betting';
+                
+                // Procesar apuesta
+                const success = await processBet(betAmount);
+                if (!success) {
+                    throw new Error('Error en la transacción');
+                }
+
+                // Animar mezcla
+                await animateShuffle();
+
+                // Generar resultado
+                const winningCup = Math.floor(Math.random() * 3);
+                const won = winningCup === selectedCup;
+
+                // Actualizar estadísticas
+                gameStats.totalBet += betAmount;
+                if (won) {
+                    gameStats.wins++;
+                    resultDiv.textContent = `¡Ganaste ${(betAmount * 2).toFixed(3)} SOL!`;
+                    resultDiv.className = 'result win';
+                } else {
+                    gameStats.losses++;
+                                    resultDiv.textContent = `Perdiste. La bola estaba en el cubilete ${winningCup + 1}`;
+                    resultDiv.className = 'result lose';
+                }
+
+                // Guardar estadísticas
+                localStorage.setItem('gameStats', JSON.stringify(gameStats));
+                updateStatsDisplay();
+
+                // Resetear estado
+                gameState = 'waiting';
+                selectedCup = null;
+                document.querySelectorAll('.cup-button').forEach(b => 
+                    b.classList.remove('selected'));
+                document.getElementById('betButton').disabled = true;
+                document.getElementById('betAmount').value = '';
+
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.textContent = 'Error en la transacción: ' + error.message;
+                resultDiv.className = 'result lose';
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Manejo de errores global
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Error no manejado:', event.reason);
+            hideLoading();
+            alert('Ocurrió un error. Por favor, intenta de nuevo.');
+        });
+
+        // Inicialización
+        updateStatsDisplay();
+        updateWalletInfo();
+    </script>
+</body>
+</html>
