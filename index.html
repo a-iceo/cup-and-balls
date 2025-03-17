@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Cups Game</title>
     <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.68.0/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.js"></script>
     <style>
         body {
             margin: 0;
             padding: 20px;
             min-height: 100vh;
-            background: linear-gradient(to bottom, #1a1a1a, #000000);
+            background: linear-gradient(to bottom, #121212, #000000);
             color: #ffffff;
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -24,74 +24,98 @@
             text-align: center;
         }
         h1 {
-            color: #00FFA3;
+            color: #e0e0e0;
             font-size: 2.5rem;
             margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(0, 255, 163, 0.5);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
         }
         .wallet-info {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(40, 40, 40, 0.7);
             padding: 10px;
             border-radius: 8px;
             margin: 10px 0;
             min-height: 20px;
+            border: 1px solid #444;
         }
         .wallet-buttons {
             margin: 20px 0;
         }
         .wallet-button {
-            background: #00FFA3;
-            color: #000;
-            border: none;
+            background: linear-gradient(145deg, #303030, #1a1a1a);
+            color: #e0e0e0;
+            border: 1px solid #444;
             padding: 12px 24px;
             margin: 0 10px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             min-width: 150px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .wallet-button:hover {
+            background: linear-gradient(145deg, #383838, #252525);
+            transform: translateY(-2px);
         }
         #gameCanvas {
-            width: 800px;
+            width: 600px;
             height: 400px;
-            background: #1a1a1a;
-            border: 2px solid #00FFA3;
+            background: #0a0a0a;
+            border: 1px solid #444;
             border-radius: 12px;
             margin: 20px 0;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
         }
         .game-stats {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(40, 40, 40, 0.7);
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
+            border: 1px solid #444;
         }
         .cup-button {
-            background: #1a1a1a;
-            color: white;
-            border: 2px solid #00FFA3;
+            background: linear-gradient(145deg, #303030, #1a1a1a);
+            color: #e0e0e0;
+            border: 1px solid #444;
             padding: 15px 30px;
             border-radius: 8px;
             cursor: pointer;
             min-width: 120px;
             margin: 0 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
         }
         .cup-button.selected {
-            background: #00FFA3;
-            color: #000;
+            background: linear-gradient(145deg, #505050, #303030);
+            color: #ffffff;
+            border-color: #888;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
         }
         .bet-button {
-            background: #00FFA3;
-            color: #000;
-            border: none;
+            background: linear-gradient(145deg, #303030, #1a1a1a);
+            color: #e0e0e0;
+            border: 1px solid #444;
             padding: 15px 30px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             min-width: 200px;
             margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .bet-button:hover {
+            background: linear-gradient(145deg, #383838, #252525);
+            transform: translateY(-2px);
+        }
+        .bet-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
         }
         input {
             background: #1a1a1a;
-            border: 2px solid #00FFA3;
+            border: 1px solid #444;
             color: white;
             padding: 10px;
             border-radius: 8px;
@@ -103,15 +127,34 @@
             font-size: 1.2rem;
             min-height: 30px;
         }
-        .game-info {
-            margin: 10px 0;
-            font-size: 0.9rem;
-            color: #00FFA3;
+        .win { color: #00FFA3; }
+        .lose { color: #FF4444; }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
         }
-        .program-balance {
-            margin: 10px 0;
-            font-size: 1rem;
-            color: #FF4444;
+        .loading.active {
+            display: flex;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e0e0e0;
+            border-top: 5px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -126,27 +169,29 @@
         <div class="game-stats" id="gameStats">
             Victorias: 0 | Derrotas: 0 | Total apostado: 0 SOL
         </div>
-        <div class="game-info">Win Chance: 10% | Payout: 3x your bet</div>
-        <div class="program-balance" id="programBalance">Program Balance: Loading...</div>
         <canvas id="gameCanvas"></canvas>
-        <div>
+        <div class="controls">
             <input type="number" id="betAmount" placeholder="Cantidad a apostar (SOL)" min="0.001" step="0.001" max="1">
-            <div>
+            <div class="cups">
                 <button class="cup-button" data-cup="0">Cubilete 1</button>
                 <button class="cup-button" data-cup="1">Cubilete 2</button>
                 <button class="cup-button" data-cup="2">Cubilete 3</button>
-                <button class="cup-button" data-cup="3">Cubilete 4</button>
-                <button class="cup-button" data-cup="4">Cubilete 5</button>
             </div>
             <button class="bet-button" id="betButton" disabled>Apostar</button>
             <div class="result" id="result"></div>
         </div>
     </div>
 
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
     <script>
+        // Asegurarnos de que solanaWeb3 esté disponible globalmente
+        const solanaWeb3 = window.solanaWeb3;
+        
         // Configuración principal
-        const PROGRAM_ID = new solanaWeb3.PublicKey("YOUR_PROGRAM_ID_HERE"); // Reemplaza con el ID de tu programa
-        const HOUSE_ADDRESS = new solanaWeb3.PublicKey("3DQcphYCYYDCzs8i62zDghg6qKAvRcuhH2BsY7QEquQ2");
+        const HOUSE_ADDRESS = '3DQcphYCYYDCzs8i62zDghg6qKAvRcuhH2BsY7QEquQ2';
         let wallet = null;
         let selectedCup = null;
         let gameState = 'waiting';
@@ -156,111 +201,182 @@
             totalBet: 0
         };
 
+        // Cargar estadísticas guardadas
+        try {
+            const savedStats = localStorage.getItem('gameStats');
+            if (savedStats) {
+                gameStats = JSON.parse(savedStats);
+                updateStatsDisplay();
+            }
+        } catch (e) {
+            console.error('Error loading stats:', e);
+        }
+
         // Configuración Three.js
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 800 / 400, 0.1, 1000);
-        camera.position.z = 10;
-
+        const camera = new THREE.PerspectiveCamera(75, 600/400, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({
             canvas: document.getElementById('gameCanvas'),
-            antialias: true
+            antialias: true,
+            alpha: true
         });
-        renderer.setSize(800, 400);
-        renderer.setClearColor(0x000000);
+        renderer.setSize(600, 400);
+        renderer.setClearColor(0x000000, 0.5);
 
-        const cupGeometry = new THREE.CylinderGeometry(1, 1, 2, 16);
-        const cupMaterial = new THREE.MeshBasicMaterial({ color: 0x00FFA3 });
-        const ballGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-        const ballMaterial = new THREE.MeshBasicMaterial({ color: 0xFF4444 });
-        let ball = null;
+        // Crear cubiletes con aspecto metálico
+        const cupGeometry = new THREE.CylinderGeometry(1, 0.7, 2, 32);
+        const metalMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xCCCCCC,
+            metalness: 0.9,
+            roughness: 0.1
+        });
 
         const cups = [];
-        for (let i = 0; i < 5; i++) {
-            const cup = new THREE.Mesh(cupGeometry, cupMaterial);
-            cup.position.x = (i - 2) * 3;
+        for (let i = 0; i < 3; i++) {
+            const cup = new THREE.Mesh(cupGeometry, metalMaterial.clone());
+            cup.position.x = (i - 1) * 3;
+            cup.position.y = 0;
             scene.add(cup);
             cups.push(cup);
         }
 
-        const light = new THREE.AmbientLight(0xffffff);
-        scene.add(light);
+        // Crear bola plateada
+        const ballGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+        const ballMaterial = new THREE.MeshStandardMaterial({
+            color: 0xEEEEEE,
+            metalness: 0.8,
+            roughness: 0.2
+        });
+        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+        ball.position.y = -1.2;
+        ball.position.x = 0;
+        ball.visible = false;
+        scene.add(ball);
 
+        // Mejorar iluminación para resaltar el efecto metálico
+        scene.add(new THREE.AmbientLight(0x444444));
+        const directionalLight1 = new THREE.DirectionalLight(0xFFFFFF, 1);
+        directionalLight1.position.set(1, 1, 1);
+        scene.add(directionalLight1);
+        const directionalLight2 = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+        directionalLight2.position.set(-1, 1, -1);
+        scene.add(directionalLight2);
+
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        // Animación principal
         function animate() {
             requestAnimationFrame(animate);
             cups.forEach(cup => cup.rotation.y += 0.01);
-            if (ball) ball.rotation.y += 0.01;
             renderer.render(scene, camera);
         }
         animate();
 
-        // Verificar saldo del programa
-        const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
-        async function updateProgramBalance() {
-            try {
-                const balance = await connection.getBalance(HOUSE_ADDRESS);
-                const balanceSOL = balance / solanaWeb3.LAMPORTS_PER_SOL;
-                const programBalanceDiv = document.getElementById('programBalance');
-                programBalanceDiv.textContent = `Program Balance: ${balanceSOL.toFixed(3)} SOL`;
-                if (balanceSOL < 1) {
-                    programBalanceDiv.style.color = '#FF4444';
-                    programBalanceDiv.textContent += ' (Insufficient funds to pay winners)';
-                } else {
-                    programBalanceDiv.style.color = '#00FFA3';
-                }
-            } catch (err) {
-                console.error('Error fetching program balance:', err);
-                document.getElementById('programBalance').textContent = 'Error fetching program balance';
-            }
+        // Funciones de utilidad
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
         }
-        updateProgramBalance();
 
-        // Funciones de wallet
-        async function connectPhantom() {
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('gameStats').textContent = 
+                `Victorias: ${gameStats.wins} | Derrotas: ${gameStats.losses} | Total apostado: ${gameStats.totalBet.toFixed(3)} SOL`;
+        }
+
+        // Conectar wallet Phantom
+        document.getElementById('phantomButton').addEventListener('click', async () => {
             try {
                 if (!window.solana) {
-                    alert('Phantom no está instalado. Por favor instálalo desde phantom.app');
                     window.open('https://phantom.app/', '_blank');
+                    alert('Por favor instala Phantom Wallet y recarga la página');
                     return;
                 }
-                const resp = await window.solana.connect();
+                
+                await window.solana.connect();
                 wallet = window.solana;
-                document.getElementById('walletInfo').textContent = `Conectado: ${resp.publicKey.toString().slice(0, 4)}...${resp.publicKey.toString().slice(-4)}`;
+                
+                const publicKey = wallet.publicKey.toString();
+                document.getElementById('walletInfo').textContent = 
+                    `Conectado: ${publicKey.substring(0, 4)}...${publicKey.substring(publicKey.length - 4)}`;
+                
                 document.getElementById('betButton').disabled = false;
-                await updateProgramBalance();
             } catch (err) {
-                console.error('Error al conectar con Phantom:', err);
-                alert('Error al conectar con Phantom');
+                console.error('Error connecting to Phantom:', err);
+                alert('Error al conectar con Phantom: ' + err.message);
             }
-        }
+        });
 
-        async function connectSolflare() {
+        // Conectar wallet Solflare
+        document.getElementById('solflareButton').addEventListener('click', async () => {
             try {
                 if (!window.solflare) {
-                    alert('Solflare no está instalado. Por favor instálalo desde solflare.com');
                     window.open('https://solflare.com/', '_blank');
+                    alert('Por favor instala Solflare Wallet y recarga la página');
                     return;
                 }
+                
                 await window.solflare.connect();
                 wallet = window.solflare;
-                document.getElementById('walletInfo').textContent = `Conectado: ${wallet.publicKey.toString().slice(0, 4)}...${wallet.publicKey.toString().slice(-4)}`;
+                
+                const publicKey = wallet.publicKey.toString();
+                document.getElementById('walletInfo').textContent = 
+                    `Conectado: ${publicKey.substring(0, 4)}...${publicKey.substring(publicKey.length - 4)}`;
+                
                 document.getElementById('betButton').disabled = false;
-                await updateProgramBalance();
             } catch (err) {
-                console.error('Error al conectar con Solflare:', err);
-                alert('Error al conectar con Solflare');
+                console.error('Error connecting to Solflare:', err);
+                alert('Error al conectar con Solflare: ' + err.message);
             }
-        }
+        });
 
         // Selección de cubilete
         document.querySelectorAll('.cup-button').forEach(button => {
             button.addEventListener('click', () => {
-                selectedCup = parseInt(button.dataset.cup);
-                document.querySelectorAll('.cup-button').forEach(b => b.classList.remove('selected'));
-                button.classList.add('selected');
+                if (gameState === 'waiting') {
+                    selectedCup = parseInt(button.dataset.cup);
+                    document.querySelectorAll('.cup-button').forEach(b => 
+                        b.classList.remove('selected'));
+                    button.classList.add('selected');
+                }
             });
         });
 
-        // Lógica de apuesta
+        // Animación de mezcla
+        function animateShuffle() {
+            return new Promise(resolve => {
+                const startPositions = cups.map(cup => ({ x: cup.position.x }));
+                let steps = 0;
+                const totalSteps = 100;
+                
+                function shuffle() {
+                    if (steps < totalSteps) {
+                        steps++;
+                        
+                        cups.forEach((cup, i) => {
+                            // Movimiento aleatorio durante la mezcla
+                            cup.position.x = startPositions[i].x + Math.sin(steps * 0.2 + i) * 2;
+                            cup.rotation.y += 0.1;
+                        });
+                        
+                        requestAnimationFrame(shuffle);
+                    } else {
+                        // Restaurar posiciones originales
+                        cups.forEach((cup, i) => {
+                            cup.position.x = startPositions[i].x;
+                        });
+                        resolve();
+                    }
+                }
+                
+                shuffle();
+            });
+        }
+
+        // Lógica de apuesta corregida
         document.getElementById('betButton').addEventListener('click', async () => {
             if (!wallet || selectedCup === null) {
                 alert('Por favor conecta tu wallet y selecciona un cubilete');
@@ -270,111 +386,116 @@
             const betAmount = parseFloat(document.getElementById('betAmount').value);
             const resultDiv = document.getElementById('result');
 
+            if (isNaN(bet
+            const betAmount = parseFloat(document.getElementById('betAmount').value);
+            const resultDiv = document.getElementById('result');
+
             if (isNaN(betAmount) || betAmount < 0.001 || betAmount > 1) {
                 alert('La apuesta debe estar entre 0.001 y 1 SOL');
                 return;
             }
 
             try {
+                showLoading();
                 gameState = 'betting';
                 document.getElementById('betButton').disabled = true;
-                resultDiv.textContent = 'Mezclando cubiletes...';
-
-                const gameStateKey = await solanaWeb3.PublicKey.createWithSeed(wallet.publicKey, 'game_state', PROGRAM_ID);
-                const betLamports = Math.floor(betAmount * solanaWeb3.LAMPORTS_PER_SOL);
-
+                
                 // Crear transacción
-                const transaction = new solanaWeb3.Transaction().add(
-                    solanaWeb3.SystemProgram.transfer({
-                        fromPubkey: wallet.publicKey,
-                        toPubkey: gameStateKey,
-                        lamports: betLamports,
-                    }),
-                    {
-                        keys: [
-                            { pubkey: gameStateKey, isSigner: false, isWritable: true },
-                            { pubkey: wallet.publicKey, isSigner: true, isWritable: true },
-                            { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
-                        ],
-                        programId: PROGRAM_ID,
-                        data: Buffer.from([1, ...new Uint8Array(new BigUint64Array([BigInt(betLamports)]).buffer), selectedCup]),
-                    }
-                );
-
+                const connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com', 'confirmed');
+                const transaction = new solanaWeb3.Transaction();
+                const instruction = solanaWeb3.SystemProgram.transfer({
+                    fromPubkey: wallet.publicKey,
+                    toPubkey: new solanaWeb3.PublicKey(HOUSE_ADDRESS),
+                    lamports: Math.floor(betAmount * solanaWeb3.LAMPORTS_PER_SOL)
+                });
+                
+                transaction.add(instruction);
+                
                 // Enviar transacción
-                const signature = await wallet.signAndSendTransaction(transaction);
-                await connection.confirmTransaction(signature);
-
-                // Animación de mezcla
-                for (let i = 0; i < 50; i++) {
-                    cups.forEach(cup => {
-                        cup.position.x += (Math.random() - 0.5) * 0.2;
-                        cup.position.z += (Math.random() - 0.5) * 0.2;
-                    });
-                    await new Promise(r => setTimeout(r, 20));
+                let signature;
+                try {
+                    signature = await wallet.signAndSendTransaction(transaction);
+                } catch (err) {
+                    if (wallet.signTransaction) {
+                        const signedTx = await wallet.signTransaction(transaction);
+                        signature = await connection.sendRawTransaction(signedTx.serialize());
+                    } else {
+                        throw err;
+                    }
                 }
-
-                // Restaurar posiciones
-                for (let i = 0; i < 5; i++) {
-                    cups[i].position.x = (i - 2) * 3;
-                    cups[i].position.z = 0;
-                }
-
-                // Consultar resultado del programa
-                const accountInfo = await connection.getAccountInfo(gameStateKey);
-                const ballPosition = accountInfo.data[32]; // Ajustar según la estructura
-                const won = selectedCup === ballPosition;
-
-                // Mostrar bolita
-                if (ball) scene.remove(ball);
-                ball = new THREE.Mesh(ballGeometry, ballMaterial);
-                ball.position.copy(cups[ballPosition].position);
-                ball.position.y = 1.5;
-                scene.add(ball);
-
+                
+                await connection.confirmTransaction(signature.signature || signature);
+                
+                // Mostrar la bola bajo el cubilete ganador antes de mezclar
+                const winningCup = Math.floor(Math.random() * 3);
+                ball.position.x = cups[winningCup].position.x;
+                ball.visible = true;
+                
+                // Esperar un momento para que el usuario vea la bola
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Ocultar la bola antes de mezclar
+                ball.visible = false;
+                
+                // Animar mezcla
+                await animateShuffle();
+                
+                // Generar resultado
+                const won = winningCup === selectedCup;
+                
+                // Mostrar la bola bajo el cubilete ganador
+                ball.position.x = cups[winningCup].position.x;
+                ball.visible = true;
+                
                 // Actualizar estadísticas
                 gameStats.totalBet += betAmount;
                 if (won) {
                     gameStats.wins++;
-                    resultDiv.textContent = `¡Ganaste ${(betAmount * 3).toFixed(3)} SOL!`;
-                    resultDiv.style.color = '#00FFA3';
+                    resultDiv.textContent = `¡Ganaste ${(betAmount * 2).toFixed(3)} SOL!`;
+                    resultDiv.className = 'result win';
                 } else {
                     gameStats.losses++;
-                    resultDiv.textContent = `Perdiste. La bola estaba en el cubilete ${ballPosition + 1}`;
-                    resultDiv.style.color = '#FF4444';
+                    resultDiv.textContent = `Perdiste. La bola estaba en el cubilete ${winningCup + 1}`;
+                    resultDiv.className = 'result lose';
                 }
-
-                document.getElementById('gameStats').textContent = 
-                    `Victorias: ${gameStats.wins} | Derrotas: ${gameStats.losses} | Total apostado: ${gameStats.totalBet.toFixed(3)} SOL`;
+                
+                // Guardar estadísticas
                 localStorage.setItem('gameStats', JSON.stringify(gameStats));
-
-                // Actualizar saldo del programa
-                await updateProgramBalance();
-
+                updateStatsDisplay();
+                
+                // Resetear estado después de un tiempo
+                setTimeout(() => {
+                    ball.visible = false;
+                    gameState = 'waiting';
+                    selectedCup = null;
+                    document.querySelectorAll('.cup-button').forEach(b => 
+                        b.classList.remove('selected'));
+                    document.getElementById('betButton').disabled = false;
+                    document.getElementById('betAmount').value = '';
+                }, 3000);
+                
             } catch (error) {
                 console.error('Error:', error);
                 resultDiv.textContent = 'Error en la transacción: ' + error.message;
-                resultDiv.style.color = '#FF4444';
-            } finally {
+                resultDiv.className = 'result lose';
                 gameState = 'waiting';
                 document.getElementById('betButton').disabled = false;
-                document.getElementById('betAmount').value = '';
-                selectedCup = null;
-                document.querySelectorAll('.cup-button').forEach(b => b.classList.remove('selected'));
+            } finally {
+                hideLoading();
             }
         });
 
-        // Cargar estadísticas guardadas
-        try {
-            const savedStats = localStorage.getItem('gameStats');
-            if (savedStats) {
-                gameStats = JSON.parse(savedStats);
-                document.getElementById('gameStats').textContent = 
-                    `Victorias: ${gameStats.wins} | Derrotas: ${gameStats.losses} | Total apostado: ${gameStats.totalBet.toFixed(3)} SOL`;
-            }
-        } catch (e) {
-            console.error('Error loading stats:', e);
-        }
+        // Manejo de errores global
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Error no manejado:', event.reason);
+            hideLoading();
+            gameState = 'waiting';
+            document.getElementById('betButton').disabled = false;
+            alert('Ocurrió un error. Por favor, intenta de nuevo.');
+        });
+
+        // Inicialización
+        updateStatsDisplay();
     </script>
 </body>
 </html>
