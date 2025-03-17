@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Cups Game</title>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-    <script src="https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/three@0.153.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.91.1/dist/index.iife.min.js"></script>
     <style>
         body {
             margin: 0;
             padding: 20px;
             min-height: 100vh;
-            background: linear-gradient(to bottom, #121212, #000000);
+            background: linear-gradient(to bottom, #1a1a1a, #000000);
             color: #ffffff;
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -24,103 +24,93 @@
             text-align: center;
         }
         h1 {
-            color: #e0e0e0;
+            color: #00FFA3;
             font-size: 2.5rem;
             margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            text-shadow: 0 0 10px rgba(0, 255, 163, 0.5);
         }
         .wallet-info {
-            background: rgba(40, 40, 40, 0.7);
+            background: rgba(255, 255, 255, 0.1);
             padding: 10px;
             border-radius: 8px;
             margin: 10px 0;
-            min-height: 20px;
-            border: 1px solid #444;
         }
         .wallet-buttons {
             margin: 20px 0;
         }
         .wallet-button {
-            background: linear-gradient(145deg, #303030, #1a1a1a);
-            color: #e0e0e0;
-            border: 1px solid #444;
+            background: #00FFA3;
+            color: #000;
+            border: none;
             padding: 12px 24px;
             margin: 0 10px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             min-width: 150px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
         }
         .wallet-button:hover {
-            background: linear-gradient(145deg, #383838, #252525);
-            transform: translateY(-2px);
+            opacity: 0.9;
         }
         #gameCanvas {
             width: 600px;
             height: 400px;
-            background: #0a0a0a;
-            border: 1px solid #444;
+            background: #1a1a1a;
+            border: 2px solid #00FFA3;
             border-radius: 12px;
             margin: 20px 0;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
         }
         .game-stats {
-            background: rgba(40, 40, 40, 0.7);
+            background: rgba(255, 255, 255, 0.1);
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
-            border: 1px solid #444;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        input {
+            background: #1a1a1a;
+            border: 2px solid #00FFA3;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            width: 200px;
+        }
+        .cups {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
         }
         .cup-button {
-            background: linear-gradient(145deg, #303030, #1a1a1a);
-            color: #e0e0e0;
-            border: 1px solid #444;
+            background: #1a1a1a;
+            color: white;
+            border: 2px solid #00FFA3;
             padding: 15px 30px;
             border-radius: 8px;
             cursor: pointer;
             min-width: 120px;
-            margin: 0 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
         }
         .cup-button.selected {
-            background: linear-gradient(145deg, #505050, #303030);
-            color: #ffffff;
-            border-color: #888;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            background: #00FFA3;
+            color: #000;
         }
         .bet-button {
-            background: linear-gradient(145deg, #303030, #1a1a1a);
-            color: #e0e0e0;
-            border: 1px solid #444;
+            background: #00FFA3;
+            color: #000;
+            border: none;
             padding: 15px 30px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
             min-width: 200px;
-            margin-top: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-        }
-        .bet-button:hover {
-            background: linear-gradient(145deg, #383838, #252525);
-            transform: translateY(-2px);
         }
         .bet-button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
-        }
-        input {
-            background: #1a1a1a;
-            border: 1px solid #444;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            width: 200px;
-            margin: 10px 0;
         }
         .result {
             margin-top: 15px;
@@ -147,7 +137,7 @@
         .spinner {
             width: 50px;
             height: 50px;
-            border: 5px solid #e0e0e0;
+            border: 5px solid #00FFA3;
             border-top: 5px solid transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -187,9 +177,6 @@
     </div>
 
     <script>
-        // Asegurarnos de que solanaWeb3 esté disponible globalmente
-        const solanaWeb3 = window.solanaWeb3;
-        
         // Configuración principal
         const HOUSE_ADDRESS = '3DQcphYCYYDCzs8i62zDghg6qKAvRcuhH2BsY7QEquQ2';
         let wallet = null;
@@ -223,44 +210,30 @@
         renderer.setSize(600, 400);
         renderer.setClearColor(0x000000, 0.5);
 
-        // Crear cubiletes con aspecto metálico
-        const cupGeometry = new THREE.CylinderGeometry(1, 0.7, 2, 32);
-        const metalMaterial = new THREE.MeshStandardMaterial({ 
-            color: 0xCCCCCC,
-            metalness: 0.9,
-            roughness: 0.1
+        // Crear cubiletes
+        const cupGeometry = new THREE.CylinderGeometry(1, 1, 2, 32);
+        const cupMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0x00FFA3,
+            shininess: 100
         });
+        const cups = [
+            new THREE.Mesh(cupGeometry, cupMaterial.clone()),
+            new THREE.Mesh(cupGeometry, cupMaterial.clone()),
+            new THREE.Mesh(cupGeometry, cupMaterial.clone())
+        ];
 
-        const cups = [];
-        for (let i = 0; i < 3; i++) {
-            const cup = new THREE.Mesh(cupGeometry, metalMaterial.clone());
-            cup.position.x = (i - 1) * 3;
-            cup.position.y = 0;
-            scene.add(cup);
-            cups.push(cup);
-        }
+        // Posicionar cubiletes
+        cups[0].position.set(-3, 0, 0);
+        cups[1].position.set(0, 0, 0);
+        cups[2].position.set(3, 0, 0);
+        cups.forEach(cup => scene.add(cup));
 
-        // Crear bola plateada
-        const ballGeometry = new THREE.SphereGeometry(0.3, 32, 32);
-        const ballMaterial = new THREE.MeshStandardMaterial({
-            color: 0xEEEEEE,
-            metalness: 0.8,
-            roughness: 0.2
-        });
-        const ball = new THREE.Mesh(ballGeometry, ballMaterial);
-        ball.position.y = -1.2;
-        ball.position.x = 0;
-        ball.visible = false;
-        scene.add(ball);
-
-        // Mejorar iluminación para resaltar el efecto metálico
-        scene.add(new THREE.AmbientLight(0x444444));
-        const directionalLight1 = new THREE.DirectionalLight(0xFFFFFF, 1);
-        directionalLight1.position.set(1, 1, 1);
-        scene.add(directionalLight1);
-        const directionalLight2 = new THREE.DirectionalLight(0xFFFFFF, 0.5);
-        directionalLight2.position.set(-1, 1, -1);
-        scene.add(directionalLight2);
+        // Iluminación
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
 
         camera.position.set(0, 5, 10);
         camera.lookAt(0, 0, 0);
@@ -376,17 +349,13 @@
             });
         }
 
-        // Lógica de apuesta corregida
+        // Lógica de apuesta
         document.getElementById('betButton').addEventListener('click', async () => {
             if (!wallet || selectedCup === null) {
                 alert('Por favor conecta tu wallet y selecciona un cubilete');
                 return;
             }
 
-            const betAmount = parseFloat(document.getElementById('betAmount').value);
-            const resultDiv = document.getElementById('result');
-
-            if (isNaN(bet
             const betAmount = parseFloat(document.getElementById('betAmount').value);
             const resultDiv = document.getElementById('result');
 
@@ -426,26 +395,12 @@
                 
                 await connection.confirmTransaction(signature.signature || signature);
                 
-                // Mostrar la bola bajo el cubilete ganador antes de mezclar
-                const winningCup = Math.floor(Math.random() * 3);
-                ball.position.x = cups[winningCup].position.x;
-                ball.visible = true;
-                
-                // Esperar un momento para que el usuario vea la bola
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Ocultar la bola antes de mezclar
-                ball.visible = false;
-                
                 // Animar mezcla
                 await animateShuffle();
                 
                 // Generar resultado
+                const winningCup = Math.floor(Math.random() * 3);
                 const won = winningCup === selectedCup;
-                
-                // Mostrar la bola bajo el cubilete ganador
-                ball.position.x = cups[winningCup].position.x;
-                ball.visible = true;
                 
                 // Actualizar estadísticas
                 gameStats.totalBet += betAmount;
@@ -459,29 +414,24 @@
                     resultDiv.className = 'result lose';
                 }
                 
-                // Guardar estadísticas
+                                // Guardar estadísticas
                 localStorage.setItem('gameStats', JSON.stringify(gameStats));
                 updateStatsDisplay();
                 
-                // Resetear estado después de un tiempo
-                setTimeout(() => {
-                    ball.visible = false;
-                    gameState = 'waiting';
-                    selectedCup = null;
-                    document.querySelectorAll('.cup-button').forEach(b => 
-                        b.classList.remove('selected'));
-                    document.getElementById('betButton').disabled = false;
-                    document.getElementById('betAmount').value = '';
-                }, 3000);
+                // Resetear estado
+                gameState = 'waiting';
+                selectedCup = null;
+                document.querySelectorAll('.cup-button').forEach(b => 
+                    b.classList.remove('selected'));
                 
             } catch (error) {
                 console.error('Error:', error);
                 resultDiv.textContent = 'Error en la transacción: ' + error.message;
                 resultDiv.className = 'result lose';
-                gameState = 'waiting';
-                document.getElementById('betButton').disabled = false;
             } finally {
                 hideLoading();
+                document.getElementById('betButton').disabled = false;
+                document.getElementById('betAmount').value = '';
             }
         });
 
