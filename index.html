@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solana Cups Game</title>
     <script src="https://unpkg.com/three@0.153.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/@solana/web3.js@1.91.1/dist/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@1.73.0/lib/index.iife.js"></script>
     <style>
         body {
             margin: 0;
@@ -177,6 +177,9 @@
     </div>
 
     <script>
+        // Asegurarnos de que solanaWeb3 esté disponible
+        const solanaWeb3 = window.solanaWeb3;
+        
         // Configuración principal
         const HOUSE_ADDRESS = '3DQcphYCYYDCzs8i62zDghg6qKAvRcuhH2BsY7QEquQ2';
         let wallet = null;
@@ -410,11 +413,13 @@
                     resultDiv.className = 'result win';
                 } else {
                     gameStats.losses++;
+                    resultDiv.textContent = `Perdiste. La bola
+                    gameStats.losses++;
                     resultDiv.textContent = `Perdiste. La bola estaba en el cubilete ${winningCup + 1}`;
                     resultDiv.className = 'result lose';
                 }
                 
-                                // Guardar estadísticas
+                // Guardar estadísticas
                 localStorage.setItem('gameStats', JSON.stringify(gameStats));
                 updateStatsDisplay();
                 
